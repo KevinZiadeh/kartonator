@@ -1,0 +1,2 @@
+# Kartonator
+> Kartonator is a tool designed to automate the process of setting up and running Karton services for malware analysis. It simplifies the deployment of Karton services by providing a streamlined setup process and managing the configuration files and dependencies required to run Karton services.

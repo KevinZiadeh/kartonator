@@ -1,0 +1,230 @@
+# Inspired from https://github.com/CERT-Polska/karton-playground/blob/master/docker-compose.yml
+
+services:
+  
+  minio:
+    image: minio/minio
+    entrypoint: sh
+    command: -c "mkdir -p /data/mwdb && minio server --address 0.0.0.0:9000 --console-address :8070 /data"
+    environment:
+      MINIO_ROOT_USER: mwdb
+      MINIO_ROOT_PASSWORD: mwdbmwdb
+    ports:
+      - "127.0.0.1:8090:9000"
+      - "127.0.0.1:8070:8070"
+    volumes:
+      - ./minio:/data
+    healthcheck:
+      test: timeout 5s bash -c ':> /dev/tcp/127.0.0.1/9000' || exit 1
+      interval: 5s
+      timeout: 5s
+      retries: 3
+  
+  postgres:
+    image: postgres:17.2
+    environment:
+      POSTGRES_USER: mwdb
+      POSTGRES_DB: mwdb
+      POSTGRES_PASSWORD: mwdbsecretpass
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "mwdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  
+  redis:
+    image: redis:alpine
+    ports:
+      - "127.0.0.1:8379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+  
+  mwdb:
+    image: certpl/mwdb:v2.15.1
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./karton.docker.ini:/etc/karton/karton.ini
+    environment:
+      MWDB_REDIS_URI: "redis://redis/"
+      MWDB_POSTGRES_URI: "postgresql://mwdb:mwdbsecretpass@postgres/mwdb"
+      MWDB_ADMIN_PASSWORD: "admin"
+      MWDB_SECRET_KEY: "secretkey"
+      MWDB_STORAGE_PROVIDER: "s3"
+      MWDB_HASH_PATHING: "0"
+      MWDB_S3_STORAGE_ENDPOINT: "minio:9000"
+      MWDB_S3_STORAGE_ACCESS_KEY: "mwdb"
+      MWDB_S3_STORAGE_SECRET_KEY: "mwdbmwdb"
+      MWDB_S3_STORAGE_BUCKET_NAME: "mwdb"
+      MWDB_ENABLE_KARTON: "1"
+  
+  mwdb-web:
+    image: certpl/mwdb-web:v2.15.1
+    depends_on:
+      - mwdb
+    ports:
+      - "127.0.0.1:8080:80"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/api/server"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+    environment:
+      NGINX_MAX_UPLOAD_SIZE: "100M"
+  
+  karton-system:
+    image: certpl/karton-system:v5.5.1
+    depends_on:
+      minio:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./karton.docker.ini:/etc/karton/karton.ini
+    entrypoint: karton-system
+    command: --setup-bucket
+  
+  karton-classifier:
+    image: certpl/karton-classifier:v2.0.0
+    depends_on:
+      - karton-system
+    volumes:
+      - ./karton.docker.ini:/etc/karton/karton.ini
+  
+  karton-dashboard:
+    image: certpl/karton-dashboard:v1.6.0
+    depends_on:
+      - karton-system
+    volumes:
+      - ./karton.docker.ini:/etc/karton/karton.ini
+    ports:
+      - "127.0.0.1:8030:5000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/varz"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+  
+  karton-mwdb-reporter:
+    image: certpl/karton-mwdb-reporter:v1.3.0
+    depends_on:
+      - karton-system
+      - mwdb-web
+    volumes:
+      - ./karton.docker.ini:/etc/karton/karton.ini
+
+  karton-file-detection:
+    build:
+      context: karton/file_detection
+    tty: true
+    develop:
+      watch:
+        - action: sync+restart
+          path: karton/file_detection
+          target: /app
+          ignore:
+            - karton/file_detection/.venv/
+        - action: rebuild
+          path: karton/file_detection/uv.lock
+        - action: rebuild
+          path: karton/file_detection/Dockerfile
+    depends_on:
+      - karton-system
+      - mwdb-web
+    volumes:
+      - ./karton.docker.ini:/etc/karton/karton.ini
+
+  karton-capa:
+    build:
+      context: karton/capa
+    tty: true
+    develop:
+      watch:
+        - action: sync+restart
+          path: karton/capa
+          target: /app
+          ignore:
+            - karton/capa/.venv/
+        - action: rebuild
+          path: karton/capa/uv.lock
+        - action: rebuild
+          path: karton/capa/Dockerfile
+    depends_on:
+      - karton-system
+      - mwdb-web
+    volumes:
+      - ./karton.docker.ini:/etc/karton/karton.ini
+
+  karton-floss:
+    build:
+      context: karton/floss
+    tty: true
+    develop:
+      watch:
+        - action: sync+restart
+          path: karton/floss
+          target: /app
+          ignore:
+            - karton/floss/.venv/
+        - action: rebuild
+          path: karton/floss/uv.lock
+        - action: rebuild
+          path: karton/floss/Dockerfile
+    depends_on:
+      - karton-system
+      - mwdb-web
+    volumes:
+      - ./karton.docker.ini:/etc/karton/karton.ini
+
+  karton-bazaar:
+    build:
+      context: karton/bazaar
+    tty: true
+    develop:
+      watch:
+        - action: sync+restart
+          path: karton/bazaar
+          target: /app
+          ignore:
+            - karton/bazaar/.venv/
+        - action: rebuild
+          path: karton/bazaar/uv.lock
+        - action: rebuild
+          path: karton/bazaar/Dockerfile
+    depends_on:
+      - karton-system
+      - mwdb-web
+    volumes:
+      - ./karton.docker.ini:/etc/karton/karton.ini
+    environment:
+      ABUSECH_API_KEY: "000111222333444555666777888999aaabbbcccdddeeefff"
+
+  karton-yara-matcher:
+    build:
+      context: karton/yara_matcher
+    tty: true
+    develop:
+      watch:
+        - action: sync+restart
+          path: karton/yara_matcher
+          target: /app
+          ignore:
+            - karton/yara_matcher/.venv/
+        - action: rebuild
+          path: karton/yara_matcher/uv.lock
+        - action: rebuild
+          path: karton/yara_matcher/Dockerfile
+    depends_on:
+      - karton-system
+      - mwdb-web
+    volumes:
+      - ./karton.docker.ini:/etc/karton/karton.ini
+      - ./karton/yara_matcher/rules/custom:/app/rules/custom # Custom YARA rules

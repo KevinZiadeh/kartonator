@@ -1,0 +1,15 @@
+[submodule "MalwareBazaar"]
+	path = karton/bazaar
+	url = https://github.com/KevinZiadeh/karton-malwarebazaar.git
+[submodule "CAPA"]
+	path = karton/capa
+	url = https://github.com/KevinZiadeh/karton-capa.git
+[submodule "FLOSS"]
+	path = karton/floss
+	url = https://github.com/KevinZiadeh/karton-floss.git
+[submodule "karton/FileDetection"]
+	path = karton/file_detection
+	url = https://github.com/KevinZiadeh/karton-file-detection.git
+[submodule "karton/YaraMatcher"]
+	path = karton/yara_matcher
+	url = https://github.com/KevinZiadeh/karton-yara-matcher.git
