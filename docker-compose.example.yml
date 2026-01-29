@@ -32,6 +32,19 @@ services:
       timeout: 5s
       retries: 5
   
+  pgweb:
+    image: sosedoff/pgweb
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8081:8081"
+    command: >
+      pgweb
+      --bind=0.0.0.0
+      --listen=8081
+      --url=postgres://mwdb:mwdbsecretpass@postgres:5432/mwdb?sslmode=disable
+  
   redis:
     image: redis:alpine
     ports:
@@ -115,6 +128,30 @@ services:
   
   karton-mwdb-reporter:
     image: certpl/karton-mwdb-reporter:v1.3.0
+    depends_on:
+      - karton-system
+      - mwdb-web
+    volumes:
+      - ./karton.docker.ini:/etc/karton/karton.ini
+
+  karton-autoit-ripper:
+    image: certpl/karton-autoit-ripper:v1.2.0
+    depends_on:
+      - karton-system
+      - mwdb-web
+    volumes:
+      - ./karton.docker.ini:/etc/karton/karton.ini
+
+  karton-asciimagic:
+    image: certpl/karton-asciimagic:7589c77fa631281b9ca7013c92c8b69b860d2a5b
+    depends_on:
+      - karton-system
+      - mwdb-web
+    volumes:
+      - ./karton.docker.ini:/etc/karton/karton.ini
+
+  karton-archive-extractor:
+    image: certpl/karton-archive-extractor:v1.5.1
     depends_on:
       - karton-system
       - mwdb-web
@@ -228,3 +265,24 @@ services:
     volumes:
       - ./karton.docker.ini:/etc/karton/karton.ini
       - ./karton/yara_matcher/rules/custom:/app/rules/custom # Custom YARA rules
+
+  karton-pdf-analyzer:
+    build:
+      context: karton/pdf_analyzer
+    tty: true
+    develop:
+      watch:
+        - action: sync+restart
+          path: karton/pdf_analyzer
+          target: /app
+          ignore:
+            - karton/pdf_analyzer/.venv/
+        - action: rebuild
+          path: karton/pdf_analyzer/uv.lock
+        - action: rebuild
+          path: karton/pdf_analyzer/Dockerfile
+    depends_on:
+      - karton-system
+      - mwdb-web
+    volumes:
+      - ./karton.docker.ini:/etc/karton/karton.ini
