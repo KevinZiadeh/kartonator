@@ -13,3 +13,6 @@
 [submodule "karton/YaraMatcher"]
 	path = karton/yara_matcher
 	url = https://github.com/KevinZiadeh/karton-yara-matcher.git
+[submodule "karton/PDFAnalyzer"]
+	path = karton/pdf_analyzer
+	url = https://github.com/KevinZiadeh/karton-pdf-analyzer.git
