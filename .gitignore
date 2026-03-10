@@ -23,5 +23,8 @@ extractors_cfg.py
 samples/
 minio/
 
-# YARA rules
-karton/private*
+**/private*
+
+# SeaweedFS
+seaweedfs/
+s3.conf
