@@ -31,7 +31,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-  
+
   pgweb:
     image: sosedoff/pgweb
     depends_on:
@@ -133,6 +133,8 @@ services:
       - mwdb-web
     volumes:
       - ./karton.docker.ini:/etc/karton/karton.ini
+    environment:
+      - KARTON_MWDB-REPORTER_REPORT_UNRECOGNIZED=true
 
   karton-autoit-ripper:
     image: certpl/karton-autoit-ripper:v1.2.0
@@ -152,6 +154,27 @@ services:
 
   karton-archive-extractor:
     image: certpl/karton-archive-extractor:v1.5.1
+    depends_on:
+      - karton-system
+      - mwdb-web
+    volumes:
+      - ./karton.docker.ini:/etc/karton/karton.ini
+
+  karton-unpacker:
+    build:
+      context: karton/unpacker
+    tty: true
+    develop:
+      watch:
+        - action: sync+restart
+          path: karton/unpacker
+          target: /app
+          ignore:
+            - karton/unpacker/.venv/
+        - action: rebuild
+          path: karton/unpacker/uv.lock
+        - action: rebuild
+          path: karton/unpacker/Dockerfile
     depends_on:
       - karton-system
       - mwdb-web

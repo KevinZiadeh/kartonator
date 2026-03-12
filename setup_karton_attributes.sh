@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
-# mwdb_setup_attributes.sh
-# Usage: ./mwdb_setup_attributes.sh [http://localhost:8080]
+# Usage: ./setup_karton_attributes.sh [http://localhost:8080]
 # Reads credentials from karton.docker.ini or karton.ini, logs in, and creates attributes.
 
 set -euo pipefail

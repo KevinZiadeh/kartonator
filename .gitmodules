@@ -16,3 +16,6 @@
 [submodule "karton/PDFAnalyzer"]
 	path = karton/pdf_analyzer
 	url = https://github.com/KevinZiadeh/karton-pdf-analyzer.git
+[submodule "karton/Unpacker"]
+	path = karton/unpacker
+	url = https://github.com/KevinZiadeh/karton-unpacker.git
